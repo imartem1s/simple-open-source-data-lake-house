@@ -1,15 +1,19 @@
+import os
 import random
 import psycopg2
+from dotenv import load_dotenv
 from faker import Faker
+
+load_dotenv()
 
 fake = Faker()
 
 DB_CONFIG = {
-    "dbname": "ecommerce",
-    "user": "userprod",
-    "password": "passwordprod",
+    "dbname": os.environ["SOURCE_POSTGRES_DB"],
+    "user": os.environ["SOURCE_POSTGRES_USER"],
+    "password": os.environ["SOURCE_POSTGRES_PASSWORD"],
     "host": "localhost",
-    "port": "5435",
+    "port": os.environ["SOURCE_POSTGRES_PORT"],
 }
 
 

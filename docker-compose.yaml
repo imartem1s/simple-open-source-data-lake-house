@@ -3,11 +3,11 @@ services:
   source-postgres:
     image: postgres:16
     environment:
-      - POSTGRES_USER=userprod
-      - POSTGRES_PASSWORD=passwordprod
-      - POSTGRES_DB=ecommerce
+      - POSTGRES_USER=${SOURCE_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${SOURCE_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${SOURCE_POSTGRES_DB}
     ports:
-      - "5435:5432"
+      - "${SOURCE_POSTGRES_PORT}:5432"
     volumes:
       - postgres-source:/var/lib/postgresql/data
 
@@ -15,8 +15,8 @@ services:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
     command: server /data --console-address ":9001"
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     ports:
       - "9005:9000"
       - "9006:9001"
@@ -25,16 +25,21 @@ services:
   
   iceberg-rest:
     image: apache/iceberg-rest-fixture
+    user: "0:0"
     ports:
       - "8282:8181"
     environment:
       - CATALOG_WAREHOUSE=s3://lakehouse/
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
       - CATALOG_S3_ENDPOINT=http://minio:9000
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - AWS_REGION=us-east-1
       - CATALOG_S3_PATH__STYLE__ACCESS=true
+      - CATALOG_CATALOG__IMPL=org.apache.iceberg.jdbc.JdbcCatalog
+      - CATALOG_URI=jdbc:sqlite:file:/tmp/iceberg-catalog/catalog.db?journal_mode=WAL
+    volumes:
+      - iceberg-catalog-db:/tmp/iceberg-catalog
     depends_on:
       - minio
   
@@ -50,13 +55,13 @@ services:
   airflow-postgres:
     image: postgres:16
     environment:
-      - POSTGRES_USER=airflow
-      - POSTGRES_PASSWORD=airflow
-      - POSTGRES_DB=airflow
+      - POSTGRES_USER=${AIRFLOW_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${AIRFLOW_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${AIRFLOW_POSTGRES_DB}
     volumes:
       - airflow-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      test: ["CMD-SHELL", "pg_isready -U ${AIRFLOW_POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -68,7 +73,7 @@ services:
         condition: service_healthy
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@airflow-postgres/${AIRFLOW_POSTGRES_DB}
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - _PIP_ADDITIONAL_REQUIREMENTS=apache-airflow-providers-trino==5.7.2
       - AIRFLOW_CONN_TRINO_DEFAULT=trino://airflow@trino:8080/iceberg
@@ -79,7 +84,7 @@ services:
     entrypoint: /bin/bash
     command:
       - -c
-      - "airflow db migrate && airflow users create --username airflow --password airflow --firstname admin --lastname admin --role Admin --email admin@example.com"
+      - "airflow db migrate && airflow users create --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PASSWORD} --firstname admin --lastname admin --role Admin --email admin@example.com"
 
   airflow-webserver:
     image: apache/airflow:2.10.2
@@ -111,7 +116,7 @@ services:
         condition: service_completed_successfully
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_POSTGRES_USER}:${AIRFLOW_POSTGRES_PASSWORD}@airflow-postgres/${AIRFLOW_POSTGRES_DB}
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - _PIP_ADDITIONAL_REQUIREMENTS=apache-airflow-providers-trino==5.7.2
       - AIRFLOW_CONN_TRINO_DEFAULT=trino://airflow@trino:8080/iceberg
@@ -123,6 +128,7 @@ services:
 
 volumes:
   postgres-source:
+  iceberg-catalog-db:
   minio-data:
   airflow-postgres-data:
   
