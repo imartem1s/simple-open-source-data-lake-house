@@ -1,0 +1,7 @@
+# Airflow runtime output (bind-mounted from docker-compose, regenerated on every DAG run)
+logs/
+
+# Python
+.venv/
+__pycache__/
+*.pyc

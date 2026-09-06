@@ -70,6 +70,8 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - _PIP_ADDITIONAL_REQUIREMENTS=apache-airflow-providers-trino==5.7.2
+      - AIRFLOW_CONN_TRINO_DEFAULT=trino://airflow@trino:8080/iceberg
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -90,6 +92,8 @@ services:
     - AIRFLOW__CORE__EXECUTOR=LocalExecutor
     - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
     - AIRFLOW__CORE__LOAD_EXAMPLES=false
+    - _PIP_ADDITIONAL_REQUIREMENTS=apache-airflow-providers-trino==5.7.2
+    - AIRFLOW_CONN_TRINO_DEFAULT=trino://airflow@trino:8080/iceberg
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -109,6 +113,8 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - _PIP_ADDITIONAL_REQUIREMENTS=apache-airflow-providers-trino==5.7.2
+      - AIRFLOW_CONN_TRINO_DEFAULT=trino://airflow@trino:8080/iceberg
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
