@@ -16,16 +16,8 @@ DB_CONFIG = {
     "port": os.environ["SOURCE_POSTGRES_PORT"],
 }
 
-
-# ---------------------------------------------------------------------------
-# Generators — PURE functions only. No DB access here.
-# Each takes whatever parent data it needs as arguments (via `depends_on`
-# below) and returns a list of column-value lists, in the same column order
-# you'll declare in SEED_PLAN.
-# ---------------------------------------------------------------------------
-
 def gen_customers():
-    # return a list of [name, email] rows
+
     customers_list = []
     for _ in range(50):
         customers_list.append([
@@ -36,7 +28,7 @@ def gen_customers():
     
 
 def gen_products():
-    # return a list of [name, category, price] rows
+
     products_list = []
     for _ in range(30):
         products_list.append([
@@ -59,9 +51,7 @@ def gen_products():
 
 
 def gen_orders(customers):
-    # `customers` is whatever seed_table() stored for the "customers" step
-    # (see context/store_result below) — decide what shape that should be.
-    # return a list of [customer_id, order_date, status] rows
+
     orders_list = []
     for _ in range(200):
         orders_list.append([
@@ -73,8 +63,7 @@ def gen_orders(customers):
 
 
 def gen_order_items(orders, products):
-    # `orders` / `products` are whatever seed_table() stored for those steps.
-    # return a list of [order_id, product_id, quantity, unit_price] rows
+
     order_items_list = []
     for _ in range(500):
         product_id = random.choice(list(products.keys()))
@@ -88,12 +77,8 @@ def gen_order_items(orders, products):
     return order_items_list
 
 
-# ---------------------------------------------------------------------------
-# Generic insert helper — table-agnostic, no knowledge of "customers" etc.
-# ---------------------------------------------------------------------------
-
 def insert_and_get_ids(conn, table, columns, id_column, rows):
-    # insert each row, RETURNING id_column, collect and return the ids
+
     placeholders = ", ".join(["%s"] * len(columns))
     col_list = ", ".join(columns)
     query = f"INSERT INTO {table} ({col_list}) VALUES ({placeholders}) RETURNING {id_column}"
@@ -107,15 +92,7 @@ def insert_and_get_ids(conn, table, columns, id_column, rows):
     return ids
 
 
-# ---------------------------------------------------------------------------
-# Declarative seed plan — describes WHAT to seed and in WHAT order,
-# instead of main() hand-wiring variables between calls.
-#
-# `depends_on` lists other step names whose *stored context* this step's
-# generate function needs — decide what you want stored per step (just ids?
-# ids + rows so you can look up prices later?) and shape store_result()
-# and each generator's signature to match.
-# ---------------------------------------------------------------------------
+
 
 SEED_PLAN = [
     {
@@ -150,8 +127,7 @@ SEED_PLAN = [
 
 
 def store_result(context, table_name, rows, ids):
-    # decide what to keep in `context[table_name]` for later steps to consume
-    # (e.g. just ids? ids zipped with rows? a dict keyed by id?)
+
     if table_name == "products":
         context[table_name] = {product_id: row[2] for product_id, row in zip(ids, rows)}
     else:
@@ -161,13 +137,13 @@ def store_result(context, table_name, rows, ids):
 def run_seed_plan(conn, plan):
     context = {}
     for step in plan:
-        # 1. gather this step's dependencies out of `context`
+
         args = [context[dep] for dep in step["depends_on"]]
-        # 2. call step["generate"](...) with those dependencies
+        
         rows = step["generate"](*args)
-        # 3. insert_and_get_ids(...) to persist and get back real ids
+        
         ids = insert_and_get_ids(conn, step["table"], step["columns"], step["id_column"], rows)
-        # 4. store_result(...) into context under step["table"]
+        
         store_result(context, step["table"], rows, ids)
         
     return context
